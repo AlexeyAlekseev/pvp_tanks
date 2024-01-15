@@ -22,10 +22,12 @@ SCREEN_CENTER = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 PLAYER1_INIT_POSITION = (round(SCREEN_WIDTH * 0.1), SCREEN_HEIGHT // 1.7)
 PLAYER2_INIT_POSITION = (round(SCREEN_WIDTH * 0.9), SCREEN_HEIGHT // 2.3)
 
-HP = 4
-LIVES = 2
+HP = 5
+LIVES = 3
 SPEED = 2
 FPS = 60
+
+BLOCKS_COUNT = 150
 
 MOVES_INPUT = [[0, -1], [1, 0], [0, 1], [-1, 0]]
 PLAYER1_INPUT = (pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_SPACE)
@@ -137,37 +139,24 @@ class UI:
         font_name = pygame.font.get_default_font()
         font = pygame.font.Font(font_name, 55)
         self.screen.fill(BOARD_BACKGROUND_COLOR)  # black color
-        LOOP_TIMER = 1000
-        loop = 0
-        while loop < LOOP_TIMER:
-            pygame.display.flip()
-            # Game Over Text
-            self.draw_text('Game Over',
-                           font, WHITE_COLOR,
-                           (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50)
-                           )
+        # Game Over Text
+        self.draw_text('Game Over',
+                       font, WHITE_COLOR,
+                       (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 5)
+                       )
 
-            # Winner Text
-            self.draw_text(f'{winner} Won!',
-                           font, WHITE_COLOR,
-                           (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100)
-                           )
+        # Winner Text
+        self.draw_text(f'{winner} Won!',
+                       font, WHITE_COLOR,
+                       (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 80)
+                       )
 
-            # instructions
-            font = pygame.font.Font(font_name, 25)
-            self.draw_text('Press Any Key to restart',
-                           font, WHITE_COLOR,
-                           (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200)
-                           )
-
-            pygame.display.update()
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    main(True)
-                    return
+        # instructions
+        font = pygame.font.Font(font_name, 25)
+        self.draw_text('Press Any Key to restart',
+                       font, WHITE_COLOR,
+                       (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200)
+                       )
 
     def draw(self):
         """Draw the UI elements on the gaming interface."""
@@ -458,20 +447,23 @@ class Bonus:
 
 objects = []
 bullets = []
-player1_tank = Tank(RED_COLOR, PLAYER1_INIT_POSITION, 0, PLAYER1_INPUT)
-player2_tank = Tank(BLUE_COLOR, PLAYER2_INIT_POSITION, 0, PLAYER2_INPUT)
-ui = UI(objects, fontUI)
-
-for _ in range(90):
+Tank(RED_COLOR, PLAYER1_INIT_POSITION, 0, PLAYER1_INPUT)
+Tank(BLUE_COLOR, PLAYER2_INIT_POSITION, 0, PLAYER2_INPUT)
+for _ in range(BLOCKS_COUNT):
     block = Block.create_if_no_collision(objects, GRID_SIZE)
 
 BONUS_TIMER = 1
 
 
-def main(game_status):
+def main():
     """Entry point of the game, setting up initial state and running the game loop."""
     global BONUS_TIMER
+
+    ui = UI(objects, fontUI)
+
     title_screen = True
+    game_status = True
+    gameplay = True
 
     while game_status:
         if title_screen:
@@ -484,43 +476,59 @@ def main(game_status):
                 elif event.type == pygame.KEYDOWN:
                     title_screen = False
         else:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-            for obj in objects:
-                if obj.type == 'tank' and obj.lives < 1:
-                    if obj.color == (255, 0, 0):
+            if gameplay:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+
+                if BONUS_TIMER > 0:
+                    BONUS_TIMER -= 1
+                else:
+                    Bonus(randint(50, SCREEN_WIDTH - 50),
+                          randint(50, SCREEN_HEIGHT - 50),
+                          randint(0, len(image_bonuses) - 1))
+                    BONUS_TIMER = randint(120, 240)
+
+                for bullet in bullets:
+                    bullet.update()
+
+                for obj in objects:
+                    obj.update()
+                ui.update()
+
+                screen.fill(BOARD_BACKGROUND_COLOR)
+
+                for bullet in bullets:
+                    bullet.draw()
+
+                for obj in objects:
+                    obj.draw()
+
+                ui.draw()
+
+                for obj in objects:
+                    if obj.type == 'tank' and obj.lives < 1:
+                        gameplay = False
+            else:
+                for obj in objects:
+                    if obj.type == 'tank' and obj.color == (255, 0, 0):
                         winner = 'Player 2'
                     else:
                         winner = 'Player 2'
                     ui.game_over(winner)
-                    # game_status = False
-
-            if BONUS_TIMER > 0:
-                BONUS_TIMER -= 1
-            else:
-                Bonus(randint(50, SCREEN_WIDTH - 50),
-                      randint(50, SCREEN_HEIGHT - 50),
-                      randint(0, len(image_bonuses) - 1))
-                BONUS_TIMER = randint(120, 240)
-
-            for bullet in bullets:
-                bullet.update()
-
-            for obj in objects:
-                obj.update()
-            ui.update()
-
-            screen.fill(BOARD_BACKGROUND_COLOR)
-
-            for bullet in bullets:
-                bullet.draw()
-
-            for obj in objects:
-                obj.draw()
-
-            ui.draw()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    elif event.type == pygame.KEYDOWN:
+                        objects.clear()
+                        bullets.clear()
+                        gameplay = True
+                        Tank(RED_COLOR, PLAYER1_INIT_POSITION, 0, PLAYER1_INPUT)
+                        Tank(BLUE_COLOR, PLAYER2_INIT_POSITION, 0, PLAYER2_INPUT)
+                        for _ in range(BLOCKS_COUNT):
+                            Block.create_if_no_collision(objects, GRID_SIZE)
 
             pygame.display.update()
             clock.tick(FPS)
@@ -528,4 +536,4 @@ def main(game_status):
 
 if __name__ == '__main__':
     running = True
-    main(running)
+    main()
