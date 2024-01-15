@@ -11,6 +11,9 @@ BLUE_COLOR = (0, 0, 255)
 GREEN_COLOR = (0, 255, 0)
 CYAN_COLOR = (0, 255, 255)
 
+FONT_SIZE = 55
+SMALL_FONT_SIZE = 25
+
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 602
 GRID_SIZE = 32
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
@@ -19,8 +22,8 @@ SCREEN_CENTER = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 PLAYER1_INIT_POSITION = (round(SCREEN_WIDTH * 0.1), SCREEN_HEIGHT // 1.7)
 PLAYER2_INIT_POSITION = (round(SCREEN_WIDTH * 0.9), SCREEN_HEIGHT // 2.3)
 
-HP = 5
-LIVES = 3
+HP = 4
+LIVES = 2
 SPEED = 2
 FPS = 60
 
@@ -98,6 +101,11 @@ class UI:
             center=(5 + index * 100 + 32 + 22, 5 + 11))
         self.screen.blit(text, rect)
 
+    def draw_text(self, text, font, color, location):
+        render = font.render(text, True, color)
+        rect = render.get_rect(center=location)
+        self.screen.blit(render, rect)
+
     def draw_title_screen(self):
         # font
         font_name = pygame.font.get_default_font()
@@ -105,41 +113,61 @@ class UI:
         # background & logo
         self.screen.fill(BOARD_BACKGROUND_COLOR)  # black color
         logo = pygame.image.load("images/game_logo.jpg")
-        logo = pygame.transform.scale(logo, (400, 400))  # resize the logo image
-        rect = logo.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+        logo = pygame.transform.scale(logo, (SCREEN_WIDTH, SCREEN_HEIGHT))  # resize the logo image
+        rect = logo.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         self.screen.blit(logo, rect.topleft)
 
         # draw title text
-        font = pygame.font.Font(font_name, 55)
-        text_surface = font.render("Tanks Game", True, (255, 255, 255))  # white color
-        text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100))
-        self.screen.blit(text_surface, text_rect)
+        font = pygame.font.Font(font_name, FONT_SIZE)
+        self.draw_text('Tanks Duel',
+                       font, CYAN_COLOR,
+                       (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100)
+                       )
 
         # instructions
-        font = pygame.font.Font(font_name, 25)
-        text_surface = font.render("Press Any Key to Start", True, (255, 255, 255))  # white color
-        text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200))
-        self.screen.blit(text_surface, text_rect)
-
+        font = pygame.font.Font(font_name, SMALL_FONT_SIZE)
+        self.draw_text('Press Any Key to Start',
+                       font, BLUE_COLOR,
+                       (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200)
+                       )
         pygame.display.update()
 
-
-    def game_over(self):
+    def game_over(self, winner):
         """Perform actions when the game is over."""
-        while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_r:
-                        main()
-            # Отображение надписи Game Over и Restart.
-            font = pygame.font.SysFont(None, 50)
-            text_game_over = font.render('Game Over', True, CYAN_COLOR)
-            screen.fill(BOARD_BACKGROUND_COLOR)
-            screen.blit(text_game_over, (SCREEN_WIDTH // 2.8, SCREEN_HEIGHT // 4))
+        font_name = pygame.font.get_default_font()
+        font = pygame.font.Font(font_name, 55)
+        self.screen.fill(BOARD_BACKGROUND_COLOR)  # black color
+        LOOP_TIMER = 1000
+        loop = 0
+        while loop < LOOP_TIMER:
             pygame.display.flip()
+            # Game Over Text
+            self.draw_text('Game Over',
+                           font, WHITE_COLOR,
+                           (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 50)
+                           )
+
+            # Winner Text
+            self.draw_text(f'{winner} Won!',
+                           font, WHITE_COLOR,
+                           (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100)
+                           )
+
+            # instructions
+            font = pygame.font.Font(font_name, 25)
+            self.draw_text('Press Any Key to restart',
+                           font, WHITE_COLOR,
+                           (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200)
+                           )
+
             pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.KEYDOWN:
+                    main(True)
+                    return
 
     def draw(self):
         """Draw the UI elements on the gaming interface."""
@@ -238,7 +266,6 @@ class Tank:
         else:
             self.rank = 0
         if self.hit_points <= 0:
-            # objects.remove(self)
             self.reset()
 
     @staticmethod
@@ -259,15 +286,11 @@ class Tank:
         self.rank = 0
         self.speed = SPEED
         self.hit_points = HP
-        if self.lives > 0:
-            self.lives -= 1
-        else:
-            ui.game_over()
-
         self.shoot_timer = 0
         self.shoot_delay = FPS
         self.bullet_speed = 5
         self.bullet_damage = 1
+        self.lives -= 1
 
 
 class Bullet:
@@ -435,8 +458,8 @@ class Bonus:
 
 objects = []
 bullets = []
-Tank(RED_COLOR, PLAYER1_INIT_POSITION, 0, PLAYER1_INPUT)
-Tank(BLUE_COLOR, PLAYER2_INIT_POSITION, 0, PLAYER2_INPUT)
+player1_tank = Tank(RED_COLOR, PLAYER1_INIT_POSITION, 0, PLAYER1_INPUT)
+player2_tank = Tank(BLUE_COLOR, PLAYER2_INIT_POSITION, 0, PLAYER2_INPUT)
 ui = UI(objects, fontUI)
 
 for _ in range(90):
@@ -445,20 +468,19 @@ for _ in range(90):
 BONUS_TIMER = 1
 
 
-def main():
+def main(game_status):
     """Entry point of the game, setting up initial state and running the game loop."""
     global BONUS_TIMER
     title_screen = True
-    running = True
 
-    while running:
+    while game_status:
         if title_screen:
             ui.draw_title_screen()
             pygame.display.update()
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    game_status = False
                 elif event.type == pygame.KEYDOWN:
                     title_screen = False
         else:
@@ -466,6 +488,14 @@ def main():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
+            for obj in objects:
+                if obj.type == 'tank' and obj.lives < 1:
+                    if obj.color == (255, 0, 0):
+                        winner = 'Player 2'
+                    else:
+                        winner = 'Player 2'
+                    ui.game_over(winner)
+                    # game_status = False
 
             if BONUS_TIMER > 0:
                 BONUS_TIMER -= 1
@@ -489,6 +519,7 @@ def main():
 
             for obj in objects:
                 obj.draw()
+
             ui.draw()
 
             pygame.display.update()
@@ -496,4 +527,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    running = True
+    main(running)
