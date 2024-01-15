@@ -21,7 +21,6 @@ PLAYER2_INIT_POSITION = (round(SCREEN_WIDTH * 0.9), SCREEN_HEIGHT // 2.3)
 
 HP = 5
 LIVES = 3
-
 SPEED = 2
 FPS = 60
 
@@ -72,10 +71,11 @@ GAME_STATUS = True
 class UI:
     """Manage and update the User Interface (UI) elements of the game."""
 
-    def __init__(self, objects, screen, fontUI):
+    def __init__(self, objects, fontUI):
         """Initialize the UI elements."""
+        pygame.init()
         self.objects = objects
-        self.screen = screen
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.fontUI = fontUI
 
     def update(self):
@@ -98,6 +98,32 @@ class UI:
             center=(5 + index * 100 + 32 + 22, 5 + 11))
         self.screen.blit(text, rect)
 
+    def draw_title_screen(self):
+        # font
+        font_name = pygame.font.get_default_font()
+
+        # background & logo
+        self.screen.fill(BOARD_BACKGROUND_COLOR)  # black color
+        logo = pygame.image.load("images/game_logo.jpg")
+        logo = pygame.transform.scale(logo, (400, 400))  # resize the logo image
+        rect = logo.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 50))
+        self.screen.blit(logo, rect.topleft)
+
+        # draw title text
+        font = pygame.font.Font(font_name, 55)
+        text_surface = font.render("Tanks Game", True, (255, 255, 255))  # white color
+        text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 100))
+        self.screen.blit(text_surface, text_rect)
+
+        # instructions
+        font = pygame.font.Font(font_name, 25)
+        text_surface = font.render("Press Any Key to Start", True, (255, 255, 255))  # white color
+        text_rect = text_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 200))
+        self.screen.blit(text_surface, text_rect)
+
+        pygame.display.update()
+
+
     def game_over(self):
         """Perform actions when the game is over."""
         while True:
@@ -113,6 +139,7 @@ class UI:
             screen.fill(BOARD_BACKGROUND_COLOR)
             screen.blit(text_game_over, (SCREEN_WIDTH // 2.8, SCREEN_HEIGHT // 4))
             pygame.display.flip()
+            pygame.display.update()
 
     def draw(self):
         """Draw the UI elements on the gaming interface."""
@@ -206,6 +233,10 @@ class Tank:
     def damage(self, value):
         """Apply damage to the Tank."""
         self.hit_points -= value
+        if self.rank > 0:
+            self.rank -= value
+        else:
+            self.rank = 0
         if self.hit_points <= 0:
             # objects.remove(self)
             self.reset()
@@ -290,7 +321,7 @@ class Bullet:
     def draw(self):
         """Draw the Bullet on the gaming interface."""
         pygame.draw.circle(screen, 'yellow', (self.parent_x,
-                                                           self.parent_y), 2)
+                                              self.parent_y), 2)
 
 
 class Block:
@@ -386,6 +417,7 @@ class Bonus:
                         obj.rank += 1
                         obj.speed += 0.3
                         obj.shoot_delay -= 10
+                        obj.hit_points += 1
                         objects.remove(self)
                         break
                 # elif self.bonus_index == 1:
@@ -405,7 +437,7 @@ objects = []
 bullets = []
 Tank(RED_COLOR, PLAYER1_INIT_POSITION, 0, PLAYER1_INPUT)
 Tank(BLUE_COLOR, PLAYER2_INIT_POSITION, 0, PLAYER2_INPUT)
-ui = UI(objects, screen, fontUI)
+ui = UI(objects, fontUI)
 
 for _ in range(90):
     block = Block.create_if_no_collision(objects, GRID_SIZE)
@@ -416,40 +448,51 @@ BONUS_TIMER = 1
 def main():
     """Entry point of the game, setting up initial state and running the game loop."""
     global BONUS_TIMER
+    title_screen = True
+    running = True
 
-    while True:
+    while running:
+        if title_screen:
+            ui.draw_title_screen()
+            pygame.display.update()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        if BONUS_TIMER > 0:
-            BONUS_TIMER -= 1
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    title_screen = False
         else:
-            Bonus(randint(50, SCREEN_WIDTH - 50),
-                  randint(50, SCREEN_HEIGHT - 50),
-                  randint(0, len(image_bonuses) - 1))
-            BONUS_TIMER = randint(120, 240)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
 
-        for bullet in bullets:
-            bullet.update()
+            if BONUS_TIMER > 0:
+                BONUS_TIMER -= 1
+            else:
+                Bonus(randint(50, SCREEN_WIDTH - 50),
+                      randint(50, SCREEN_HEIGHT - 50),
+                      randint(0, len(image_bonuses) - 1))
+                BONUS_TIMER = randint(120, 240)
 
-        for obj in objects:
-            obj.update()
-        ui.update()
+            for bullet in bullets:
+                bullet.update()
 
-        screen.fill(BOARD_BACKGROUND_COLOR)
+            for obj in objects:
+                obj.update()
+            ui.update()
 
-        for bullet in bullets:
-            bullet.draw()
+            screen.fill(BOARD_BACKGROUND_COLOR)
 
-        for obj in objects:
-            obj.draw()
-        ui.draw()
+            for bullet in bullets:
+                bullet.draw()
 
-        pygame.display.update()
-        clock.tick(FPS)
+            for obj in objects:
+                obj.draw()
+            ui.draw()
+
+            pygame.display.update()
+            clock.tick(FPS)
 
 
 if __name__ == '__main__':
