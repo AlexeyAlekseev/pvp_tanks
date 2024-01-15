@@ -11,7 +11,7 @@ GREEN_COLOR = (0, 255, 0)
 CYAN_COLOR = (0, 255, 255)
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
-GRID_SIZE = 20
+GRID_SIZE = 32
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
 GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
 SCREEN_CENTER = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
@@ -24,13 +24,15 @@ FPS = 60
 
 MOVES_INPUT = [[0, -1], [1, 0], [0, 1], [-1, 0]]
 PLAYER1_INPUT = (pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_SPACE)
-PLAYER2_INPUT = (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP_ENTER)
+PLAYER2_INPUT = (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_RETURN)
 
 clock = pygame.time.Clock()
 
 pygame.init()
 fontUI = pygame.font.Font(None, 30)
+
 image_brick = pygame.image.load("images/block_brick.png")
+
 image_tank = [
     pygame.image.load("images/tank_level_0.png"),
     pygame.image.load("images/tank_level_1.png"),
@@ -46,6 +48,16 @@ image_bangs = [
     pygame.image.load("images/bang_1.png"),
     pygame.image.load("images/bang_2.png")
 ]
+
+image_bonuses = [
+    pygame.image.load("images/bonus_star.png"),
+    pygame.image.load("images/bonus_tank.png"),
+    pygame.image.load("images/bonus_bomb.png"),
+    pygame.image.load("images/bonus_time.png"),
+    pygame.image.load("images/bonus_helmet.png"),
+    pygame.image.load("images/bonus_shovel.png")
+]
+
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
 
@@ -56,7 +68,8 @@ class UI:
     def update(self):
         pass
 
-    def draw(self):
+    @staticmethod
+    def draw():
         i = 0
         for obj in objects:
             if obj.type == 'tank':
@@ -114,7 +127,7 @@ class Tank:
             self.direct = 2
 
         for obj in objects:
-            if obj != self and self.rect.colliderect(obj.rect):
+            if obj != self and obj.type != 'bonus' and self.rect.colliderect(obj.rect):
                 self.rect.topleft = origin_x, origin_y
 
         if keys[self.key_shoot] and self.shoot_timer == 0:
@@ -128,11 +141,6 @@ class Tank:
 
     def draw(self):
         """Отрисовывает объект на экране."""
-        # pygame.draw.rect(screen, self.color, self.rect)
-        #
-        # x = self.rect.centerx + MOVES_INPUT[self.direct][0] * 30
-        # y = self.rect.centery + MOVES_INPUT[self.direct][1] * 30
-        # pygame.draw.line(screen, 'white', self.rect.center, (x, y), 4)
         screen.blit(self.image, self.rect)
 
     def damage(self, value):
@@ -166,6 +174,7 @@ class Bullet:
                 if obj != self.parent and obj.rect.collidepoint(self.parent_x, self.parent_y):
                     obj.damage(self.damage)
                     to_remove.append(self)
+                    Bang(self.parent_x, self.parent_y)
                     break
 
         for bullet in bullets:
@@ -202,24 +211,86 @@ class Block:
             objects.remove(self)
 
     def draw(self):
-        pygame.draw.rect(screen, GREEN_COLOR, self.rect)
-        pygame.draw.rect(screen, CYAN_COLOR, self.rect, 2)
+        screen.blit(image_brick, self.rect)
 
     @staticmethod
-    def is_colliding(rect, objects):
-        for obj in objects:
+    def is_colliding(rect, objects_list):
+        for obj in objects_list:
             if rect.colliderect(obj.rect):
                 return True
         return False
 
     @staticmethod
-    def create_if_no_collision(objects, grid_size):
+    def create_if_no_collision(objects_list, grid_size):
         while True:
             x = randint(0, SCREEN_WIDTH // GRID_SIZE - 1) * GRID_SIZE
             y = randint(0, SCREEN_HEIGHT // GRID_SIZE - 1) * GRID_SIZE
             rect = pygame.Rect(x, y, grid_size, grid_size)
-            if not Block.is_colliding(rect, objects):
+            if not Block.is_colliding(rect, objects_list):
                 return Block((x, y), grid_size)
+
+
+class Bang:
+    def __init__(self, px, py):
+        objects.append(self)
+        self.type = 'bang'
+        self.px, self.py = px, py
+        self.frame = 0
+        self.image = image_bangs[0]
+        self.rect = self.image.get_rect(center=(self.px, self.py))
+
+    def get_rect(self):
+        self.rect = self.image.get_rect(center=(self.px, self.py))
+
+    def update(self):
+        self.frame += 0.3
+        if self.frame >= 3:
+            objects.remove(self)
+
+    def draw(self):
+        image = image_bangs[int(self.frame)]
+        rect = image.get_rect(center=(self.px, self.py))
+        screen.blit(image, rect)
+
+    def damage(self, value):
+        pass
+
+
+class Bonus:
+    def __init__(self, px, py, bonus_index):
+        objects.append(self)
+        self.type = 'bonus'
+
+        self.image = image_bonuses[bonus_index]
+        self.rect = self.image.get_rect(center=(px, py))
+
+        self.timer = 600
+        self.bonus_index = bonus_index
+
+    def update(self):
+        if self.timer > 0:
+            self.timer -= 1
+        else:
+            objects.remove(self)
+
+        for obj in objects:
+            if obj.type == 'tank' and self.rect.colliderect(obj.rect):
+                if self.bonus_index == 0:
+                    if obj.rank < len(image_tank):
+                        obj.rank += 1
+                        objects.remove(self)
+                        break
+                elif self.bonus_index == 1:
+                    obj.hit_points += 1
+                    objects.remove(self)
+                    break
+
+    def draw(self):
+        if self.timer % 30 < 15:
+            screen.blit(self.image, self.rect)
+
+    def damage(self, value):
+        pass
 
 
 objects = []
@@ -231,15 +302,25 @@ ui = UI()
 for _ in range(90):
     block = Block.create_if_no_collision(objects, GRID_SIZE)
 
+BONUS_TIMER = 1
+
 
 def main():
+    global BONUS_TIMER
     game_status = True
 
     while game_status:
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
+        if BONUS_TIMER > 0:
+            BONUS_TIMER -= 1
+        else:
+            Bonus(randint(50, SCREEN_WIDTH - 50), randint(50, SCREEN_HEIGHT - 50), randint(0, len(image_bonuses) - 1))
+            BONUS_TIMER = randint(120, 240)
 
         for bullet in bullets:
             bullet.update()
