@@ -1,6 +1,5 @@
-import random
 import sys
-from random import randint, choice
+from random import randint
 
 import pygame
 
@@ -76,12 +75,12 @@ GAME_STATUS = True
 class UI:
     """Manage and update the User Interface (UI) elements of the game."""
 
-    def __init__(self, objects, fontUI):
+    def __init__(self, objects_list, ui_font):
         """Initialize the UI elements."""
         pygame.init()
-        self.objects = objects
+        self.objects = objects_list
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.fontUI = fontUI
+        self.fontUI = ui_font
 
     def update(self):
         pass
