@@ -6,10 +6,12 @@ import pygame
 class Settings:
     """
 
-    This class represents the settings for a game. It contains various attributes that define the configuration of the game.
+    This class represents the settings for a game. It contains various
+    attributes that define the configuration of the game.
 
     Attributes:
-    - BOARD_BACKGROUND_COLOR: The color of the game board's background as an RGB tuple of integers.
+    - BOARD_BACKGROUND_COLOR: The color of the game board's background as an
+      RGB tuple of integers.
     - WHITE_COLOR: The color white as an RGB tuple of integers.
     - RED_COLOR: The color red as an RGB tuple of integers.
     - BLUE_COLOR: The color blue as an RGB tuple of integers.
@@ -30,9 +32,11 @@ class Settings:
     - SPEED: The speed of the players in the game.
     - FPS: The frames per second for the game.
     - BLOCKS_COUNT: The number of blocks in the game.
-    - MOVES_INPUT: The valid moves input for the players as a list of coordinate changes.
+    - MOVES_INPUT: The valid moves input for the players as a list of
+      coordinate changes.
     - SPACING: The spacing between elements in the game.
-    - MAX_ATTEMPTS: The maximum number of attempts for a certain action in the game.
+    - MAX_ATTEMPTS: The maximum number of attempts for a certain action
+      in the game.
 
     """
     BOARD_BACKGROUND_COLOR: tuple[int, int, int] = (0, 0, 0)

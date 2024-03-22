@@ -1,3 +1,16 @@
+"""
+pygame_UI.py: This module is part of the game package.
+
+This module utilizes Pygame, an open-source library designed for making
+video games, to create and manage the User Interface (UI) of the game. It
+establishes the controls, display settings, and game states, and handles
+events such as user inputs.
+
+This module may contain classes and functions to setup the game window,
+draw graphics, and deal with elements like the main menu, game screens,
+buttons, labels, and other interactive components.
+"""
+
 import pygame
 from settings.settings import Settings
 
@@ -74,7 +87,7 @@ class UI:
             0,
             32
         )
-        self.fontUI = pygame.font.Font(None, 30)
+        self.font_ui = pygame.font.Font(None, 30)
         self.clock = pygame.time.Clock()
 
     def update(self):
@@ -103,29 +116,54 @@ class UI:
                 5 + tank_life_img.get_height() + 2)
             self.screen.blit(tank_life_img, life_position)
 
-        text = self.fontUI.render(str(getattr(obj, 'hit_points')), 1,
-                                  obj.color)
+        text = self.font_ui.render(str(getattr(obj, 'hit_points')), 1,
+                                   obj.color)
         rect = text.get_rect(
             center=(5 + index * 500 + 32 + 22, 5 + 11))
         self.screen.blit(text, rect)
 
         # Draw tank rank
-        rank_text = self.fontUI.render(f"Rank: {getattr(obj, 'rank')}", 1,
-                                       obj.color)
+        rank_text = self.font_ui.render(f"Rank: {getattr(obj, 'rank')}", 1,
+                                        obj.color)
         rank_rect = rank_text.get_rect(
             center=(5 + index * 500 + tank_life_img_width + 90, 5 + 11))
         self.screen.blit(rank_text, rank_rect)
 
     def draw_text(self, text, font, color, location):
+        """
+        Draws the specified text on the screen using the given font, color,
+        and location.
+
+        Parameters:
+            text (str): The text to be displayed on the screen.
+            font (pygame.font.Font): The font used for rendering the text.
+            color (tuple): The color of the text, specified as a tuple of RGB
+            values (red, green, blue).
+            location (tuple): The location on the screen where the text should
+            be drawn, specified as a tuple of x and y coordinates.
+
+        Returns:
+            None
+        """
         render = font.render(text, True, color)
         rect = render.get_rect(center=location)
         self.screen.blit(render, rect)
 
     def draw_title_screen(self):
-        # font
+        """
+
+        Draws the title screen for the game.
+
+        Parameters:
+            self: The current instance of the class.
+
+        Returns:
+            None
+
+        """
+
         font_name = pygame.font.get_default_font()
 
-        # background & logo
         self.screen.fill(settings.BOARD_BACKGROUND_COLOR)
         logo = pygame.image.load("images/game_logo.jpg")
         logo = pygame.transform.scale(
@@ -143,7 +181,6 @@ class UI:
         )
         self.screen.blit(logo, rect.topleft)
 
-        # draw title text
         font = pygame.font.Font(font_name, settings.FONT_SIZE)
         self.draw_text(
             'Tanks Duel',
@@ -155,7 +192,6 @@ class UI:
             )
         )
 
-        # instructions
         font = pygame.font.Font(font_name, settings.SMALL_FONT_SIZE)
         self.draw_text(
             'Press Any Key to Start',
@@ -183,7 +219,6 @@ class UI:
             )
         )
 
-        # Winner Text
         self.draw_text(
             f'{winner} Won!',
             font,
@@ -194,7 +229,6 @@ class UI:
             )
         )
 
-        # instructions
         font = pygame.font.Font(font_name, 25)
         self.draw_text(
             'Press Any Key to restart',

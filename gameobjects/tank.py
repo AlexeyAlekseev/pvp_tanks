@@ -5,7 +5,7 @@ from gameobjects.base import GameObject
 from gameobjects.bullet import Bullet
 from gameobjects.blocks import BrickBlock
 from settings.settings import Settings
-from gameobjects.pygame_IU import image_tank, screen, sound_effects
+from gameobjects.pygame_ui import image_tank, screen, sound_effects
 
 
 class Tank(GameObject):
@@ -48,7 +48,7 @@ class Tank(GameObject):
         self.bullet_damage = 1
 
         self.sound_channel = pygame.mixer.Channel(sound_chanel)
-        self.sound_channel.set_volume(0.5)
+        self.sound_channel.set_volume(0.2)
 
     def update(self):
         """Update the state of the Tank."""
@@ -151,6 +151,8 @@ class Tank(GameObject):
             self.reset()
         elif self.rank > 0:
             self.rank -= 1
+            self.speed -= 0.3
+            self.shoot_delay += 10
 
     @staticmethod
     def create_if_no_collision(objects_list, grid_size):
@@ -184,3 +186,4 @@ class Tank(GameObject):
         self.bullet_speed = 5
         self.bullet_damage = 1
         self.lives -= 1
+        self.sound_channel.set_volume(0.2)
