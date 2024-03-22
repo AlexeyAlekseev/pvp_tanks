@@ -3,9 +3,9 @@ from random import randint
 import pygame
 from gameobjects.base import GameObject
 from gameobjects.bullet import Bullet
-from gameobjects.gameobjects import Block
+from gameobjects.blocks import BrickBlock
 from settings.settings import Settings
-from gameobjects.pygame_IU import image_tank, screen
+from gameobjects.pygame_IU import image_tank, screen, sound_effects
 
 
 class Tank(GameObject):
@@ -17,7 +17,9 @@ class Tank(GameObject):
             obj_coordinates: tuple[int, int],
             direct: int,
             move_input: tuple[int, int, int, int, int],
-            objects_list: list
+            objects_list: list,
+            sound_chanel: int
+
     ):
         """Initialize the attributes of the Tank."""
         super().__init__(objects_list)
@@ -41,60 +43,69 @@ class Tank(GameObject):
         self.key_shoot = move_input[4]
 
         self.shoot_timer = 0
-        self.shoot_delay = 60
+        self.shoot_delay = 90
         self.bullet_speed = 5
         self.bullet_damage = 1
+
+        self.sound_channel = pygame.mixer.Channel(sound_chanel)
+        self.sound_channel.set_volume(0.5)
 
     def update(self):
         """Update the state of the Tank."""
         self.change_tank_state()
-        new_x, new_y = self.check_boundaries()
-        self.update_position(new_x, new_y)
-        self.check_collisions(new_x, new_y)
+        self.check_boundaries()
         self.shoot_bullet()
 
     def check_boundaries(self):
         """Checks and adjusts for boundaries"""
         keys = pygame.key.get_pressed()
 
-        # Initialize new_x and new_y as the original positions
-        new_x, new_y = self.rect.topleft
+        # original positions
+        prev_x, prev_y = self.rect.topleft
+
+        # Don't play the sound by default
+        should_play_sound = False
 
         if keys[self.move_left]:
-            new_x -= self.speed
-            if new_x < 0:
-                new_x = 0
+            should_play_sound = True
+            self.rect.x -= self.speed
+            if self.rect.x < 0:
+                self.rect.x = 0
             self.direct = 3
         elif keys[self.move_right]:
-            new_x += self.speed
-            if new_x > Settings.SCREEN_WIDTH - self.rect.width:
-                new_x = Settings.SCREEN_WIDTH - self.rect.width
+            should_play_sound = True
+            self.rect.x += self.speed
+            if self.rect.x > Settings.SCREEN_WIDTH - self.rect.width:
+                self.rect.x = Settings.SCREEN_WIDTH - self.rect.width
             self.direct = 1
         elif keys[self.move_up]:
-            new_y -= self.speed
-            if new_y < 0:
-                new_y = 0
+            should_play_sound = True
+            self.rect.y -= self.speed
+            if self.rect.y < 0:
+                self.rect.y = 0
             self.direct = 0
         elif keys[self.move_down]:
-            new_y += self.speed
-            if new_y > (Settings.SCREEN_HEIGHT - 2) - self.rect.height:
-                new_y = (Settings.SCREEN_HEIGHT - 2) - self.rect.height
+            should_play_sound = True
+            self.rect.y += self.speed
+            if self.rect.y > (Settings.SCREEN_HEIGHT - 2) - self.rect.height:
+                self.rect.y = (Settings.SCREEN_HEIGHT - 2) - self.rect.height
             self.direct = 2
 
-        return new_x, new_y
+        if self.rect.y < 2 * Settings.GRID_SIZE:
+            self.rect.y = 2 * Settings.GRID_SIZE
 
-    def update_position(self, new_x: int, new_y: int) -> None:
-        """Updates the position if not in the top row of the grid"""
-        if new_y < 2 * Settings.GRID_SIZE:
-            new_y = 2 * Settings.GRID_SIZE
-        self.rect.x, self.rect.y = new_x, new_y
+        # Play the tank moving sound if tank is moving
+        if should_play_sound:
+            if not self.sound_channel.get_busy():
+                self.sound_channel.play(sound_effects["track_long"])
+        else:
+            self.sound_channel.stop()  # Stop the sound
 
-    def check_collisions(self, new_x: int, new_y: int) -> None:
-        """Checks for collision with other objects"""
+        # check collision
         for obj in self.objects_list:
             if obj != self and obj.type != 'bonus' and self.rect.colliderect(
                     obj.rect):
-                self.rect.topleft = new_x, new_y
+                self.rect.topleft = prev_x, prev_y
 
     def shoot_bullet(self):
         """Checks if shooting is possible and shoots"""
@@ -105,6 +116,9 @@ class Tank(GameObject):
             Bullet(self, self.rect.centerx, self.rect.centery, bullet_x,
                    bullet_y, self.bullet_damage, self.objects_list)
             self.shoot_timer = self.shoot_delay
+
+            # Start to play the shooting sound
+            sound_effects["shoot"].play()
 
         if self.shoot_timer > 0:
             self.shoot_timer -= 1
@@ -128,15 +142,15 @@ class Tank(GameObject):
         """Draw the Tank on the gaming interface."""
         screen.blit(self.image, self.rect)
 
-    def damage(self, value):
+    def damage(self, value, rank=None):
         """Apply damage to the Tank."""
         self.hit_points -= value
-        if self.rank > 0:
-            self.rank -= value
-        else:
-            self.rank = 0
+        sound_effects["tank_hit"].play()
         if self.hit_points <= 0:
+            sound_effects["impact"].play()  # Play the destruction sound
             self.reset()
+        elif self.rank > 0:
+            self.rank -= 1
 
     @staticmethod
     def create_if_no_collision(objects_list, grid_size):
@@ -151,7 +165,7 @@ class Tank(GameObject):
                 Settings.SCREEN_HEIGHT // Settings.GRID_SIZE - 1
             ) * Settings.GRID_SIZE
             rect = pygame.Rect(x, y, grid_size, grid_size)
-            if not Block.is_colliding(rect, objects_list):
+            if not BrickBlock.is_colliding(rect, objects_list):
                 return x, y
 
     def reset(self):

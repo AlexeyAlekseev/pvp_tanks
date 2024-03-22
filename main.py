@@ -3,17 +3,22 @@ from random import randint
 
 import pygame
 
-from gameobjects.gameobjects import Block, Bonus
+from gameobjects.blocks import BrickBlock, ArmorBlock
+from gameobjects.gameobjects import Bonus
 from settings.settings import Settings
-from gameobjects.pygame_IU import UI, PLAYER1_INPUT, PLAYER2_INPUT, \
+from gameobjects.pygame_IU import (
+    UI,
+    PLAYER1_INPUT,
+    PLAYER2_INPUT,
     image_bonuses
+)
 from gameobjects.tank import Tank
 
 settings = Settings()
 
 game_objects = []
-bullets = []
 ui = UI(game_objects)
+
 
 def create_objects():
     Tank(
@@ -21,17 +26,34 @@ def create_objects():
         settings.PLAYER1_INIT_POSITION,
         0,
         PLAYER1_INPUT,
-        game_objects
+        game_objects,
+        4
     )
     Tank(
         settings.BLUE_COLOR,
         settings.PLAYER2_INIT_POSITION,
         0,
         PLAYER2_INPUT,
-        game_objects
+        game_objects,
+        3
     )
     for _ in range(settings.BLOCKS_COUNT):
-        Block.create_if_no_collision(game_objects, settings.GRID_SIZE)
+        BrickBlock.create_if_no_collision(game_objects, settings.GRID_SIZE)
+
+
+def update_objects(timer):
+    # Change bricks block to armored
+    if timer % (60 * settings.FPS) == 0:  # Каждую минуту
+        bricks_to_replace = [block for block in game_objects if
+                             isinstance(block, BrickBlock)]
+        for brick in bricks_to_replace:
+            game_objects.remove(brick)
+            if randint(0, 100) < 30:
+                ArmorBlock.create_if_no_collision(game_objects,
+                                                  settings.GRID_SIZE)
+            else:
+                BrickBlock.create_if_no_collision(game_objects,
+                                                  settings.GRID_SIZE)
 
 
 def handle_game_over(objects):
@@ -49,7 +71,6 @@ def handle_gameplay_events(event, gameplay):
         sys.exit()
     elif event.type == pygame.KEYDOWN:
         game_objects.clear()
-        bullets.clear()
         gameplay = True
         create_objects()
     return gameplay
@@ -80,18 +101,14 @@ def main():
     title_screen = True
     game_status = True
     gameplay = True
+    game_timer = 0
     create_objects()
-    print(game_objects)
-    print('*' * 120)
-    print(bullets)
-    print('*' * 120)
-    for obj in game_objects:
-        print(obj)
 
     while game_status:
         if title_screen:
             ui.draw_title_screen()
             pygame.display.update()
+            music_started = False
 
             for event in pygame.event.get():
                 (game_status,
@@ -101,7 +118,13 @@ def main():
                     title_screen
                 )
         else:
+            if not music_started:
+                pygame.mixer.music.load("sounds/main.mp3")
+                pygame.mixer.music.play()
+                music_started = True
+
             if gameplay:
+                game_timer += 1
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         pygame.quit()
@@ -110,18 +133,15 @@ def main():
                 if bonus_timer > 0:
                     bonus_timer -= 1
                 else:
-                    generate_bonus()
+                    bonus_timer = generate_bonus()
 
-                for bullet in bullets:
-                    bullet.update()
+                update_objects(game_timer)
+
                 for obj in game_objects:
                     obj.update()
 
                 ui.update()
                 ui.screen.fill(settings.BOARD_BACKGROUND_COLOR)
-
-                for bullet in bullets:
-                    bullet.draw()
 
                 for obj in game_objects:
                     obj.draw()
@@ -131,6 +151,7 @@ def main():
                 for obj in game_objects:
                     if obj.type == 'tank' and obj.lives < 1:
                         gameplay = False
+
             else:
                 handle_game_over(game_objects)
                 for event in pygame.event.get():
@@ -140,5 +161,4 @@ def main():
 
 
 if __name__ == '__main__':
-    running = True
     main()

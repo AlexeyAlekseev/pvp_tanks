@@ -1,6 +1,7 @@
 import pygame
 from settings.settings import Settings
 
+pygame.mixer.init()
 settings = Settings()
 screen = pygame.display.set_mode(
     (
@@ -17,17 +18,20 @@ PLAYER2_INPUT = (
     pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_RETURN
 )
 
-image_brick = pygame.image.load("images/block_brick.png")
+image_brick = [
+    pygame.image.load("images/block_brick.png"),
+    pygame.image.load("images/block_armor.png")
+]
 
 image_tank = [
     pygame.image.load("images/tank_level_0.png"),
     pygame.image.load("images/tank_level_1.png"),
     pygame.image.load("images/tank_level_2.png"),
     pygame.image.load("images/tank_level_3.png"),
-    # pygame.image.load("images/tank_level_4.png"),
-    # pygame.image.load("images/tank_level_5.png"),
-    # pygame.image.load("images/tank_level_6.png"),
-    # pygame.image.load("images/tank_level_7.png")
+    pygame.image.load("images/tank_level_4.png"),
+    pygame.image.load("images/tank_level_5.png"),
+    pygame.image.load("images/tank_level_6.png"),
+    pygame.image.load("images/tank_level_7.png")
 ]
 image_bangs = [
     pygame.image.load("images/bang_0.png"),
@@ -37,12 +41,22 @@ image_bangs = [
 
 image_bonuses = [
     pygame.image.load("images/bonus_star.png"),
-    # pygame.image.load("images/bonus_tank.png"),
+    pygame.image.load("images/bonus_tank.png"),
+    pygame.image.load("images/bonus_helmet.png"),
     # pygame.image.load("images/bonus_bomb.png"),
     # pygame.image.load("images/bonus_time.png"),
-    # pygame.image.load("images/bonus_helmet.png"),
     # pygame.image.load("images/bonus_shovel.png")
 ]
+
+sound_effects = {
+    "star": pygame.mixer.Sound("sounds/star.wav"),
+    "bonus": pygame.mixer.Sound("sounds/bonus.wav"),
+    "impact": pygame.mixer.Sound("sounds/impact.wav"),
+    "shoot": pygame.mixer.Sound("sounds/shoot.wav"),
+    "track_long": pygame.mixer.Sound("sounds/track_long.wav"),
+    "tank_hit": pygame.mixer.Sound("sounds/tank_hit.wav"),
+    "block_hit": pygame.mixer.Sound("sounds/block_hit.wav")
+}
 
 
 class UI:
@@ -70,7 +84,7 @@ class UI:
         """Draw the tank on the gaming interface."""
         pygame.draw.rect(
             self.screen, obj.color,
-            (5 + index * 100, 5, 22, 22)
+            (5 + index * 500, 5, 22, 22)
         )
 
         tank_life_img = pygame.transform.scale(
@@ -81,18 +95,26 @@ class UI:
             )
         )
 
+        tank_life_img_width = tank_life_img.get_width()
         lives = getattr(obj, 'lives')
         for i in range(lives):
             life_position = (
-                i * (tank_life_img.get_width() + 5) + 5 + index * 100,
-                5 + tank_life_img.get_height() + 5)
+                i * (tank_life_img.get_width() + 2) + 5 + index * 500,
+                5 + tank_life_img.get_height() + 2)
             self.screen.blit(tank_life_img, life_position)
 
         text = self.fontUI.render(str(getattr(obj, 'hit_points')), 1,
                                   obj.color)
         rect = text.get_rect(
-            center=(5 + index * 100 + 32 + 22, 5 + 11))
+            center=(5 + index * 500 + 32 + 22, 5 + 11))
         self.screen.blit(text, rect)
+
+        # Draw tank rank
+        rank_text = self.fontUI.render(f"Rank: {getattr(obj, 'rank')}", 1,
+                                       obj.color)
+        rank_rect = rank_text.get_rect(
+            center=(5 + index * 500 + tank_life_img_width + 90, 5 + 11))
+        self.screen.blit(rank_text, rank_rect)
 
     def draw_text(self, text, font, color, location):
         render = font.render(text, True, color)

@@ -8,59 +8,9 @@ from gameobjects.pygame_IU import (
     image_brick,
     image_bangs,
     image_bonuses,
-    image_tank
+    image_tank, sound_effects
 )
 from settings.settings import Settings
-
-
-class Block(GameObject):
-    """Manages the state and behavior of a Block in the game."""
-
-    def __init__(self, obj_coordinates, size, objects_list):
-        """Initialize the attributes of the Block."""
-        super().__init__(objects_list)
-        self.type = 'block'
-        self.rect = pygame.Rect(obj_coordinates[0], obj_coordinates[1], size,
-                                size)
-        self.hit_points = 1
-
-    def update(self):
-        """Updates the state of the Block."""
-        pass
-
-    def damage(self, value):
-        """Applies damage to the Block."""
-        self.hit_points -= value
-        if self.hit_points <= 0:
-            self.objects_list.remove(self)
-
-    def draw(self):
-        """Draws the Block on the gaming interface."""
-        screen.blit(image_brick, self.rect)
-
-    @staticmethod
-    def is_colliding(rect, objects_list):
-        """Checks for collision between the Block and other objects."""
-        for obj in objects_list:
-            if rect.colliderect(obj.rect):
-                return True
-        return False
-
-    @staticmethod
-    def create_if_no_collision(objects_list, grid_size):
-        """Creates an instance of Block if there's no collision."""
-        while True:
-            x = randint(
-                0,
-                Settings.SCREEN_WIDTH // Settings.GRID_SIZE - 1
-            ) * Settings.GRID_SIZE
-            y = randint(
-                2,
-                Settings.SCREEN_HEIGHT // Settings.GRID_SIZE - 1
-            ) * Settings.GRID_SIZE
-            rect = pygame.Rect(x, y, grid_size, grid_size)
-            if not Block.is_colliding(rect, objects_list):
-                return Block((x, y), grid_size, objects_list)
 
 
 class Bang(GameObject):
@@ -97,7 +47,7 @@ class Bonus(GameObject):
         self.image = image_bonuses[bonus_index]
         self.rect = self.image.get_rect(center=(px, py))
 
-        self.timer = 600
+        self.timer = 400
         self.bonus_index = bonus_index
 
     def update(self):
@@ -106,16 +56,46 @@ class Bonus(GameObject):
         else:
             self.objects_list.remove(self)
 
+        bonus_actions = {
+            0: self.star,
+            1: self.bonus_tank,
+            2: self.bonus_helmet
+        }
+
+        if self.bonus_index in bonus_actions:
+            bonus_actions[self.bonus_index]()
+
+    def star(self):
         for obj in self.objects_list:
             if obj.type == 'tank' and self.rect.colliderect(obj.rect):
-                if self.bonus_index == 0 and obj.rank < 3:
-                    if obj.rank < len(image_tank):
-                        obj.rank += 1
-                        obj.speed += 0.3
-                        obj.shoot_delay -= 10
-                        obj.hit_points += 1
-                        self.objects_list.remove(self)
-                        break
+                sound_effects["star"].play()
+                if obj.rank < len(image_tank) - 1:
+                    obj.rank += 1
+                    obj.speed += 0.3
+                    obj.shoot_delay -= 10
+                else:
+                    pass
+                self.objects_list.remove(self)
+
+    def bonus_tank(self):
+        for obj in self.objects_list:
+            if obj.type == 'tank' and self.rect.colliderect(obj.rect):
+                sound_effects["bonus"].play()
+                if obj.lives < 6:
+                    obj.lives += 1
+                else:
+                    pass
+                self.objects_list.remove(self)
+
+    def bonus_helmet(self):
+        for obj in self.objects_list:
+            if obj.type == 'tank' and self.rect.colliderect(obj.rect):
+                sound_effects["bonus"].play()
+                if obj.hit_points < 9:
+                    obj.hit_points += 1
+                else:
+                    pass
+                self.objects_list.remove(self)
 
     def draw(self):
         if self.timer % 30 < 15:

@@ -1,4 +1,7 @@
-class GameObject:
+from abc import ABC, abstractmethod
+
+
+class GameObject(ABC):
     objects_list = []
 
     def __init__(self, objects_list: list):
@@ -11,5 +14,6 @@ class GameObject:
     def draw(self):
         raise NotImplementedError
 
-    def damage(self, value):
-        raise NotImplementedError
+    @abstractmethod
+    def damage(self, **kwargs):
+        pass

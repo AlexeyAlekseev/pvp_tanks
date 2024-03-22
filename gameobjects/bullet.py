@@ -27,38 +27,35 @@ class Bullet(GameObject):
         self.parent_y += self.bullet_y
         self.rect.x = self.parent_x
         self.rect.y = self.parent_y
+        self.collision()
 
+    def collision(self):
         to_remove = []
-
         if not (
-                0 <= self.parent_x <= Settings.SCREEN_WIDTH
-        ) or not (
+                0 <= self.parent_x <= Settings.SCREEN_WIDTH and
                 0 <= self.parent_y <= Settings.SCREEN_HEIGHT
         ):
             to_remove.append(self)
         else:
             for obj in self.objects_list:
-                if obj != self.parent and obj.type not in (
-                        'bang', 'bonus'
-                ) and obj.rect.collidepoint(
-                    self.parent_x,
-                    self.parent_y
-                ):
-                    obj.damage(self._damage)
+                if (obj is not self and
+                        obj is not self.parent and
+                        obj.type not in (
+                        'bonus', 'bang') and self.rect.colliderect(
+                            obj.rect)):
+                    if obj.type is not 'block':
+                        obj.damage(self._damage, self)
+                    else:
+                        obj.damage(self._damage, rank=self.parent.rank)
                     to_remove.append(self)
                     Bang(self.parent_x, self.parent_y, self.objects_list)
                     break
 
-        for bullet in self.objects_list:
-            if bullet != self and self.rect.colliderect(bullet.rect):
-                to_remove.append(self)
-                to_remove.append(bullet)
-
-        for bullet in to_remove:
-            if bullet in self.objects_list:
+        if to_remove:
+            for bullet in to_remove:
                 self.objects_list.remove(bullet)
 
-    def damage(self, value):
+    def damage(self, value, rank=None):
         """Apply damage to what the Bullet hits."""
         self.hit_points -= value
         if self.hit_points <= 0:
